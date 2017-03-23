@@ -1,5 +1,8 @@
 const qs = require('querystring');
+const AWS = require('aws-sdk');
 const fetch = require('node-fetch');
+
+const dynamodb = new AWS.DynamoDB.DocumentClient();
 
 const getCode = (event) => {
   var code = null;
@@ -27,6 +30,15 @@ const requestToken = (code) => {
     });
 };
 
+const saveResponse = (response) => {
+  const params = {
+    TableName: process.env.TEAMS_TABLE,
+    Item: response,
+  };
+  console.log('Put', params);
+  return dynamodb.put(params).promise();
+};
+
 const successResponse = callback => callback(null, {
   statusCode: 302,
   headers: { Location: process.env.INSTALL_SUCCESS_URL },
@@ -44,6 +56,6 @@ module.exports.handler = (event, context, callback) =>
   Promise.resolve(event)
     .then(getCode) // Get code from event
     .then(requestToken) // Exchange code for token
-    // .then(saveResponse) Save Token to DDB **TODO**
+    .then(saveResponse) //Save Token to DDB
     .then(() => successResponse(callback))
     .catch(error => errorResponse(error, callback));
